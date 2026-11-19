@@ -1,30 +1,56 @@
 #!/usr/bin/env python3
-"""news-image-20261118: copy the pre-drawn front page to the output dir.
+"""Publish the 18 November 2026 front page.
 
-The image (1024x1024 PNG, "THE WORLD — Wednesday 18 November 2026") was
-drawn with Pillow during development and is stored next to this file as
-entry.png. This program is stdlib-only: it just copies that file to
-$MAKEFUN_OUTPUT_DIR/entry.png, so both runs write identical bytes.
+The artwork itself — a 1024x1024 PNG newspaper page titled "THE WORLD —
+WEDNESDAY 18 NOVEMBER 2026" — sits beside this script as entry.png.
+This script does nothing creative: it checks the picture is present and
+within the competition's size cap, then places an exact copy of it in the
+output directory so the harness can collect it. Running it twice over the
+same entry.png always yields the same bytes.
 """
+
 import os
 import shutil
+import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+# Where the picture lives: the same folder as this script.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PICTURE_NAME = "entry.png"
+
+# Competition cap: the front page must fit in one mebibyte.
+SIZE_CAP = 1024 * 1024
+
+# The harness tells us where to put the result; fall back to /output.
+OUTPUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
 
 
-MAX_BYTES = 1048576  # competition limit: at most 1 MiB
+def fail(message):
+    """Print an error and stop with a non-zero exit code."""
+    print("news-image-20261118: " + message, file=sys.stderr)
+    raise SystemExit(1)
 
 
-def main():
-    src = os.path.join(HERE, "entry.png")
-    if not os.path.isfile(src):
-        raise SystemExit("entry.png missing next to main.py")
-    if os.path.getsize(src) > MAX_BYTES:
-        raise SystemExit("entry.png exceeds the 1 MiB limit")
-    os.makedirs(OUT, exist_ok=True)
-    shutil.copyfile(src, os.path.join(OUT, "entry.png"))
+def publish():
+    picture_path = os.path.join(SCRIPT_DIR, PICTURE_NAME)
+
+    if not os.path.isfile(picture_path):
+        fail(
+            "entry.png is missing — expected it at %s; nothing to publish."
+            % picture_path
+        )
+
+    picture_bytes = os.path.getsize(picture_path)
+    if picture_bytes > SIZE_CAP:
+        fail(
+            "entry.png is %d bytes, over the %d-byte limit."
+            % (picture_bytes, SIZE_CAP)
+        )
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    destination = os.path.join(OUTPUT_DIR, PICTURE_NAME)
+    shutil.copyfile(picture_path, destination)
+    print("Published %s (%d bytes) to %s" % (PICTURE_NAME, picture_bytes, destination))
 
 
 if __name__ == "__main__":
-    main()
+    publish()
